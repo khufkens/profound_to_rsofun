@@ -1,7 +1,7 @@
 # download and unzip the profound database in a desired directory
 
 # set path where to store the data
-path <- "./data/"
+path <- "./data/profound"
 
 # download ASCII zip file
 download.file(
