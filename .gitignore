@@ -39,4 +39,4 @@ vignettes/*.pdf
 .Renviron
 
 # ignore master ASCII files
-data/profound/*_master
+data/profound/*.sqlite
