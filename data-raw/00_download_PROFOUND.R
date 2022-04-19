@@ -11,7 +11,8 @@ download.file(
 
 # unzip the data to the path above
 unzip(
-  file.path(tempdir(), 'profound.zip'),
+  "~/Desktop/ProfoundData.zip",
+  #file.path(tempdir(), 'profound.zip'),
   exdir = path,
   junkpaths = TRUE
 )

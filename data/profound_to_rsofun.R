@@ -4,7 +4,7 @@
 
 library(ProfoundData)
 library(ggplot2)
-#library(tidyverse)
+library(tidyverse)
 
 db <- "data/profound/ProfoundData.sqlite"
 setDB(db)
@@ -16,13 +16,18 @@ es <- function(temp){
 }
 
 # get all sites
-sites <- getData(dataset = "SITES")
+sites <- browseData() %>%
+  filter(
+    METEOROLOGICAL == 1
+  )
 
 # cycle over all sites and grab
 # compile data
 met_data <- sites %>%
   group_by(site) %>%
   do({
+
+  print(.)
 
   # get meteorological data
   met <- getData(
@@ -60,11 +65,11 @@ met_data <- sites %>%
       doy = as.numeric(format(date, "%j")),
       hour = as.numeric(format(date, "%H")),
       temp = temp,
-      temp_soil = NA,
       prec = prec,
       snow = NA,
       vpd = vpd,
-      rh = (1-vpd/es(273.15 + temp)) * 100, # temperature in KELVIN
+      # temperature in KELVIN
+      rh = (1 - vpd / es(273.15 + temp) ) * 100,
       ppfd = NA,
       par = NA,
       patm = patm / 1000,
@@ -88,41 +93,43 @@ met_data <- sites %>%
     ) %>%
     as_tibble()
 
-  print(head(soil))
-
   soil <- soil %>%
     select(
       date,
-      swcFMDS1_degC,
-      tsFMDS1_degC
+      starts_with("swc1"),
+      starts_with("tsFMDS1_deg")
     ) %>%
     rename(
-      'swc' = 'swcFMDS1_degC',
+      'swc' = starts_with('swc1'),
       'temp_soil' = 'tsFMDS1_degC'
     ) %>%
     mutate(
       date = as.POSIXct(date, "%Y-%m-%d %H:%M:%S")
     )
 
-  met <- left_join(met, soil)
+  met <- left_join(soil, met)
 
-  # co2 data
-  co2 <- climate::co2_demo %>%
-    rename(
-      'year' = 'yy',
-      'month' = 'mm',
-      'co2' = 'co2_interp'
-    ) %>%
-    select(
-      'year',
-      'month',
-      'co2'
-    )
+  print(met)
+  break
 
-  met <- met %>%
-    mutate(
-      month = as.numeric(format(date, "%m")),
-    ) %>% left_join(co2)
+  # # co2 data
+  # co2 <- climate::co2_demo %>%
+  #   rename(
+  #     'year' = 'yy',
+  #     'month' = 'mm',
+  #     'co2' = 'co2_interp'
+  #   ) %>%
+  #   select(
+  #     'year',
+  #     'month',
+  #     'co2'
+  #   )
+  #
+  # met <- met %>%
+  #   mutate(
+  #     month = as.numeric(format(date, "%m")),
+  #   ) %>%
+  #   left_join(co2)
 
   # sort variables
   met <- met %>%
@@ -150,4 +157,11 @@ met_data <- sites %>%
   met
 
   })
+
+
+#---- aggregation to hourly and daily level ----
+
+
+
+
 
