@@ -1,7 +1,11 @@
-# convert data from PROFOUND database to rsofun common format
+# convert data from PROFOUND database to rsofun
+# p-model and lm3ppa common format
 
 # will use the half hourly flux data as a basis rather than daily data
 
+# Check which variables are actually needed (Beni, Laura?)
+
+# load libraries
 library(ProfoundData)
 library(ggplot2)
 library(tidyverse)
@@ -26,8 +30,6 @@ sites <- browseData() %>%
 met_data <- sites %>%
   group_by(site) %>%
   do({
-
-  print(.)
 
   # get meteorological data
   met <- getData(
@@ -70,20 +72,12 @@ met_data <- sites %>%
       vpd = vpd,
       # temperature in KELVIN
       rh = (1 - vpd / es(273.15 + temp) ) * 100,
-      ppfd = NA,
       par = NA,
       patm = patm / 1000,
       wind = wind,
       ccov_int = NA,
-      ccov = NA,
-      swc = NA
-    ) %>%
-    filter(
-      !is.na(rh)
+      ccov = NA
     )
-
-  # if soil temperature or SWC does not exist - back fill
-  # with NA values
 
   # get soil data
   soil <- getData(
@@ -107,29 +101,35 @@ met_data <- sites %>%
       date = as.POSIXct(date, "%Y-%m-%d %H:%M:%S")
     )
 
+  if("swc" %in% names(soil)){
+    print("swc")
+  } else {
+    soil <- soil %>%
+      mutate(
+        swc = NA
+      )
+  }
+
   met <- left_join(soil, met)
 
-  print(met)
-  break
+  # co2 data
+  co2 <- climate::co2_demo %>%
+    rename(
+      'year' = 'yy',
+      'month' = 'mm',
+      'co2' = 'co2_interp'
+    ) %>%
+    select(
+      'year',
+      'month',
+      'co2'
+    )
 
-  # # co2 data
-  # co2 <- climate::co2_demo %>%
-  #   rename(
-  #     'year' = 'yy',
-  #     'month' = 'mm',
-  #     'co2' = 'co2_interp'
-  #   ) %>%
-  #   select(
-  #     'year',
-  #     'month',
-  #     'co2'
-  #   )
-  #
-  # met <- met %>%
-  #   mutate(
-  #     month = as.numeric(format(date, "%m")),
-  #   ) %>%
-  #   left_join(co2)
+  met <- met %>%
+    mutate(
+      month = as.numeric(format(date, "%m")),
+    ) %>%
+    left_join(co2)
 
   # sort variables
   met <- met %>%
@@ -151,6 +151,7 @@ met_data <- sites %>%
       wind,
       ccov_int,
       ccov,
+      co2,
       swc
     )
 
@@ -158,10 +159,27 @@ met_data <- sites %>%
 
   })
 
+#---- gap filling ----
+
+# Only retain variables that have 80% coverage throughout
+# the day (for calculation of hourly / daily means)
+
 
 #---- aggregation to hourly and daily level ----
 
 
+
+#---- plotting ----
+
+p <- ggplot(met_data) +
+  geom_point(
+    aes(
+      date,
+      vpd
+    )
+  ) +
+  facet_wrap(~site)
+p
 
 
 
